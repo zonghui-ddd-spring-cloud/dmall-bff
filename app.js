@@ -33,10 +33,22 @@ const express = require('express')
 const app = express()
 
 app.get('/', (req, res) => {
-    const shippingServer = getServerByAppId('shipping-service')
-    request.get(shippingServer + '/inspector', (err, resp)=> {
-        res.send(resp.body)
-    })
+    async.parallel({
+        one: function(callback) {
+            const shippingServer = getServerByAppId('shipping-service')
+            request.get(shippingServer + '/inspector', (err, resp)=> {
+                callback(err, resp.body)
+            })
+        },
+        products: function(callback) {
+            const shippingServer = getServerByAppId('product-service')
+            request.get(shippingServer + '/products', (err, resp)=> {
+                callback(err, resp.body)
+            })
+        }
+    }, function(err, results) {
+        res.send(results)
+    });
 })
 
 app.listen(3000, () => {
@@ -46,7 +58,7 @@ app.listen(3000, () => {
 
 const getServerByAppId = (appId)=> {
     const instances = client.getInstancesByAppId(appId);
-    const server = 'http://' + _.get(instances, '1.ipAddr') + ':' + _.get(instances, '1.port.$')
-    console.log(server);
+    const server = 'http://' + _.get(instances, '0.ipAddr') + ':' + _.get(instances, '0.port.$')
+    console.log(instances);
     return server
 }
